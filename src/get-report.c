@@ -34,13 +34,14 @@ struct options {
 	bool        do_extended_report;
 	bool        do_custom_digest;
 	bool	    do_help;
+	uint32_t    key_select;
 };
 
 void print_usage(void)
 {
 	fprintf(stderr,
 		"Usage: " PROG_NAME " [-f|--data-file data_file] [-d|--digest digest_name]\n"
-		"       [-x|--extended] [-o|--out-dir dir] [-h|--help] report_file\n"
+		"       [-x|--extended] [-o|--out-dir dir] [-k|--key-select key] [-h|--help] report_file\n"
 		"\n"
 		"Retrieve the attestation report from the SEV-SNP firmware and write it to\n"
 		"'report_file'.\n"
@@ -64,19 +65,23 @@ void print_usage(void)
 		"  -c|--cert-dir dir\n"
 		"    Write any certificates retrieved with -x to 'dir'. Ignored unless -x is\n"
 		"    also specified.\n"
+		"\n"
+		"  -k|--key-select key\n"
+		"    Key to use for signing the report. 0 means VLEK or VCEK, 1 means VCEK, 2 means VLEK.\n"
 		"\n");
 }
 
 int parse_options(int argc, char *argv[], struct options *options)
 {
 	int rc = EXIT_FAILURE;
-	char *short_options = "c:d:f:hx";
+	char *short_options = "c:d:f:k:hx";
 	struct option long_options[] = {
-		{ "cert-dir",  required_argument, NULL, 'c' },
-		{ "digest",    required_argument, NULL, 'd' },
-		{ "data-file", required_argument, NULL, 'f' },
-		{ "help",      no_argument,       NULL, 'h' },
-		{ "extended",  no_argument,       NULL, 'x' },
+		{ "cert-dir",   required_argument, NULL, 'c' },
+		{ "digest",     required_argument, NULL, 'd' },
+		{ "data-file",  required_argument, NULL, 'f' },
+		{ "help",       no_argument,       NULL, 'h' },
+		{ "extended",   no_argument,       NULL, 'x' },
+		{ "key-select", required_argument, NULL, 'k' },
 		{0},
 	};
 
@@ -104,6 +109,9 @@ int parse_options(int argc, char *argv[], struct options *options)
 			break;
 		case 'x':
 			options->do_extended_report = true;
+			break;
+		case 'k':
+			options->key_select = atoi(optarg);
 			break;
 		case 'h':
 			options->do_help = true;
@@ -250,7 +258,7 @@ void print_digest(const uint8_t *digest, size_t size)
 	putchar('\n');
 }
 
-int get_report(const uint8_t *data, size_t data_size,
+int get_report(const uint8_t *data, size_t data_size, uint32_t key_select,
 	       struct attestation_report *report)
 {
 	int rc = EXIT_FAILURE;
@@ -274,6 +282,8 @@ int get_report(const uint8_t *data, size_t data_size,
 	memset(&req, 0, sizeof(req));
 	if (data)
 		memcpy(&req.user_data, data, data_size);
+
+	req.key_select = key_select;
 
 	memset(&resp, 0, sizeof(resp));
 
@@ -326,7 +336,7 @@ out:
 	return rc;
 }
 
-int get_extended_report(const uint8_t *data, size_t data_size,
+int get_extended_report(const uint8_t *data, size_t data_size, uint32_t key_select,
 			struct attestation_report *report,
 			uint8_t **certs, size_t *certs_size)
 {
@@ -356,6 +366,8 @@ int get_extended_report(const uint8_t *data, size_t data_size,
 #endif
 	if (data)
 		memcpy(&req.data.user_data, data, data_size);
+
+	req.data.key_select = key_select;
 
 	memset(&resp, 0, sizeof(resp));
 
@@ -654,7 +666,7 @@ int main(int argc, char *argv[])
 
 	/* Retrieve the attestation report from the SEV FW */
 	if (options.do_extended_report) {
-		rc = get_extended_report(hash, hash_size, &report, &certs, &certs_size);
+		rc = get_extended_report(hash, hash_size, options.key_select, &report, &certs, &certs_size);
 		if (rc != EXIT_SUCCESS) {
 			errno = rc;
 			perror("get_extended_report");
@@ -669,7 +681,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	else {
-		rc = get_report(hash, hash_size, &report);
+		rc = get_report(hash, hash_size, options.key_select, &report);
 		if (rc != EXIT_SUCCESS) {
 			errno = rc;
 			perror("get_report");
