@@ -25,6 +25,12 @@
 #define AUTHOR_KEY_EN_SHIFT	0
 #define AUTHOR_KEY_EN_MASK	(1UL << (AUTHOR_KEY_EN_SHIFT))
 
+#define MASK_CHIP_KEY_SHIFT	1
+#define MASK_CHIP_KEY_MASK	(1UL << (MASK_CHIP_KEY_SHIFT))
+
+#define SIGNING_KEY_SHIFT	2
+#define SIGNING_KEY_MASK	(7UL << (MASK_CHIP_KEY_SHIFT))
+
 union tcb_version {
 	struct {
 		uint8_t boot_loader;

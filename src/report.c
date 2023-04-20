@@ -166,6 +166,26 @@ void print_author_key_en(struct attestation_report *report)
 }
 
 /*
+ * Print the Mask Chip key bit.
+ */
+void print_mask_chip_key(struct attestation_report *report)
+{
+	if (report) {
+		printf("Mask Chip Key: %s\n", report->flags & MASK_CHIP_KEY_MASK ? "Yes" : "No");
+	}
+}
+
+/*
+ * Print the Signing key bits.
+ */
+void print_signing_key(struct attestation_report *report)
+{
+	if (report) {
+		printf("Signing Key: 0x%lx\n", (report->flags & SIGNING_KEY_MASK) >> SIGNING_KEY_SHIFT);
+	}
+}
+
+/*
  * Print the report data (in hex) supplied by the guest.
  */
 void print_report_data(struct attestation_report *report)
@@ -283,6 +303,8 @@ void print_report(struct attestation_report *report)
 	print_platform_version(report);
 	print_platform_info(report);
 	print_author_key_en(report);
+	print_mask_chip_key(report);
+	print_signing_key(report);
 	print_report_data(report);
 	print_measurement(report);
 	print_host_data(report);
